@@ -1,6 +1,6 @@
 Shopinterest
 ===========
-An E-Commerce platform for Pinterest users
+An E-Commerce platform for Pinterest users (archieved: https://web.archive.org/web/20140625113732/http://www.shopintoit.com/).
 
 Techcrunch Coverage:
 
