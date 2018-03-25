@@ -23,6 +23,41 @@ class NativeCheckoutService extends BaseService {
         }
     }
 
+    private function get_coupon($coupon_code) {
+        $coupon = NULL;
+        if (!empty2($coupon_code)) {
+            $coupon = BaseModel::findCachedOne(
+                CacheKey::q($dbconfig->account->name . ".mycoupon?code=" . $coupon_code));
+        }
+        return $coupon;
+    }
+
+    private function get_discount($coupon) {
+        $discount = 0;
+        if($coupon['price_offer_type'] == FLAT_VALUE_OFF){
+            $discount = $coupon['price_off'];
+        }
+    }
+
+    private function cal_flat_discount(&$item, $coupon, $discount, $currency_symbol) {
+        $dis = min($item['product_price'], $discount);
+        $item['discount'] = $currency_symbol . $dis;
+        $item['subtotal'] = $item['subtotal'] - $dis;
+    }
+
+    private function cal_percentage_discount(&$item, $coupon) {
+        $item['discount'] = $coupon['price_off']."%";
+        $item['subtotal'] = $item['subtotal'] - ((int)($item['product_price'] * $coupon['price_off'])) /100.0;
+    }
+
+    private function get_coupon_free_shipping_info($coupon, $coupon_free_shipping_info, $item) {
+        if ($coupon['free_shipping']) {
+            return array(TRUE, $item['store_id'], $item['product_id']);
+        } else {
+            return $coupon_free_shipping_info;
+        }
+    }
+
     public function myorder_summary(){
         global $dbconfig;
         $params = $this->params;
@@ -35,30 +70,16 @@ class NativeCheckoutService extends BaseService {
         $dest = $myorder_grp->getShippingCountry();
 
         $coupon_free_shipping_info = array(FALSE, 0, 0); //is_free, store_id, product_id
-        $grp_coupon = NULL;
-        $left_grp_discount = 0;
+        $grp_coupon = get_coupon($myorder_grp->getCouponCode());
+        $left_grp_discount = get_discount($grp_coupon);
         $coupon_used = FALSE; // now only one coupom per cart(order group)!
-        if(!empty2($myorder_grp->getCouponCode())){
-            $grp_coupon = BaseModel::findCachedOne(
-                CacheKey::q($dbconfig->account->name . ".mycoupon?code=" . $myorder_grp->getCouponCode()));
-            if($grp_coupon['price_offer_type'] == FLAT_VALUE_OFF){
-                $left_grp_discount = $grp_coupon['price_off'];
-            }
-        }
         $orders = MyorderGroupsMapper::getOrders($account_dbobj, $myorder_grp->getId());
         $items_by_store = array();
         $summary_by_store = array();
         $order_ids_by_store = array();
         foreach($orders as $order){
-            $order_coupon = NULL;
-            $left_order_discount = 0;
-            if(!empty2($order['coupon_code'])){
-                $order_coupon = BaseModel::findCachedOne(
-                    CacheKey::q($dbconfig->account->name . ".mycoupon?code=" . $order['coupon_code']));
-                if($order_coupon['price_offer_type'] == FLAT_VALUE_OFF){
-                    $left_order_discount = $order_coupon['price_off'];
-                }
-            }
+            $order_coupon = get_coupon($order['coupon_code']);
+            $left_order_discount = get_discount($order_coupon);
             $order_store = BaseModel::findCachedOne(
                 CacheKey::q($dbconfig->account->name . ".store?id=" . $order['store_id']));
 
@@ -81,56 +102,35 @@ class NativeCheckoutService extends BaseService {
 
                 // coupon
                 if(!$coupon_used){
-                    if($grp_coupon && $grp_coupon['price_offer_type'] == FLAT_VALUE_OFF){
-                        $dis = min($item['product_price'], $left_grp_discount); // only one product
-                        $item['discount'] = $return['currency_symbol'] . $dis;
-                        $item['subtotal'] = $item['subtotal'] - $dis;
-                        $left_grp_discount = $left_grp_discount - $dis;
-                        $coupon_used = TRUE;
-                        if($grp_coupon['free_shipping']){
-                            $coupon_free_shipping_info = array(TRUE, $item['store_id'], $item['product_id']);
+                    if ($grp_coupon && ($grp_coupon['price_offer_type'] == FLAT_VALUE_OFF || $grp_coupon['price_offer_type'] == PERCENTAGE_OFF)) {
+                        if ($grp_coupon['price_offer_type'] == FLAT_VALUE_OFF) {
+			    cal_flat_discount($item, $grp_coupon, $left_grp_discount, $return['currency_symbol']);
+                            $left_grp_discount = $left_grp_discount - $dis;
+                        } else {
+                            cal_percentage_discount($item, $grp_coupon);
                         }
-                    } else if($grp_coupon && $grp_coupon['price_offer_type'] == PERCENTAGE_OFF){
-                        $item['discount'] = $grp_coupon['price_off']."%";
-                        $item['subtotal'] = $item['subtotal'] - ((int)($item['product_price'] * $grp_coupon['price_off'])) /100.0;
                         $coupon_used = TRUE;
-                        if($grp_coupon['free_shipping']){
-                            $coupon_free_shipping_info = array(TRUE, $item['store_id'], $item['product_id']);
+                        $coupon_free_shipping_info = get_coupon_free_shipping_info($grp_coupon, $coupon_free_shipping_info, $item);
+                    } else if($order_coupon && ($order_coupon['price_offer_type'] == FLAT_VALUE_OFF || $order_coupon['price_offer_type'] == PERCENTAGE_OFF)){
+                        if ($order_coupon['price_offer_type'] == FLAT_VALUE_OFF) {
+			    cal_flat_discount($item, $grp_coupon, $left_order_discount, $return['currency_symbol']);
+                            $left_grp_discount = $left_grp_discount - $dis;
+                        } else {
+                            cal_percentage_discount($item, $order_coupon);
                         }
-                    } else if($order_coupon && $order_coupon['price_offer_type'] == FLAT_VALUE_OFF){
-                        $dis = min($item['product_price'], $left_order_discount);
-                        $item['discount'] = $return['currency_symbol'] . $dis;
-                        $item['subtotal'] = $item['subtotal'] - $dis;
-                        $left_grp_discount = $left_grp_discount - $dis;
                         $coupon_used = TRUE;
-                        if($order_coupon['free_shipping']){
-                            $coupon_free_shipping_info = array(TRUE, $item['store_id'], $item['product_id']);
-                        }
-                    } else if($order_coupon && $order_coupon['price_offer_type'] == PERCENTAGE_OFF){
-                        $item['discount'] = $order_coupon['price_off']."%";
-                        $item['subtotal'] = $item['subtotal'] - ((int)($item['product_price'] * $order_coupon['price_off'])) /100.0;
-                        $coupon_used = TRUE;
-                        if($order_coupon['free_shipping']){
-                            $coupon_free_shipping_info = array(TRUE, $item['store_id'], $item['product_id']);
-                        }
+                        $coupon_free_shipping_info = get_coupon_free_shipping_info($order_coupon, $coupon_free_shipping_info, $item);
                     } else if(!empty($item['coupon_code'])){
                         $item_coupon = BaseModel::findCachedOne(
                             CacheKey::q($dbconfig->account->name . ".mycoupon?code=" . $item['coupon_code']));
-                        if($item_coupon && $item_coupon['price_offer_type'] == FLAT_VALUE_OFF){
-                            $dis = min($item['product_price'], $item_coupon['price_off']);
-                            $item['discount'] = $return['currency_symbol'] . $dis;
-                            $item['subtotal'] = $item['subtotal'] - $dis;
-                            $coupon_used = TRUE;
-                            if($item_coupon['free_shipping']){
-                                $coupon_free_shipping_info = array(TRUE, $item['store_id'], $item['product_id']);
+                        if ($item_coupon && $item_coupon['price_offer_type'] == FLAT_VALUE_OFF) {
+                            if ($item_coupon['price_offer_type'] == FLAT_VALUE_OFF) {
+			        cal_flat_discount($item, $item_coupon, $item_coupon['price_off'], $return['currency_symbol']);
+                            } elseif ($item_coupon['price_offer_type'] == PERCENTAGE_OFF) {
+                                cal_percentage_discount($item, $item_coupon);
                             }
-                        } else if($item_coupon && $item_coupon['price_offer_type'] == PERCENTAGE_OFF){
-                            $item['discount'] = $item_coupon['price_off']."%";
-                            $item['subtotal'] = $item['subtotal'] - ((int)($item['product_price'] * $item_coupon['price_off'])) /100.0;
                             $coupon_used = TRUE;
-                            if($item_coupon['free_shipping']){
-                                $coupon_free_shipping_info = array(TRUE, $item['store_id'], $item['product_id']);
-                            }
+                            $coupon_free_shipping_info = get_coupon_free_shipping_info($item_coupon, $coupon_free_shipping_info, $item);
                         }
                     } else {
                         $item['discount'] = "-";

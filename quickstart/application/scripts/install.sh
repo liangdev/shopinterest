@@ -206,7 +206,8 @@ set_zend_framework(){
     }
     rm -rf zend
     rm -rf ZendFramework*
-    wget https://s3.amazonaws.com/shopinterest_public/ZendFramework-1.11.11.zip
+    #wget https://s3.amazonaws.com/shopinterest_public/ZendFramework-1.11.11.zip
+    wget https://packages.zendframework.com/releases/ZendFramework-1.11.11/ZendFramework-1.11.11.zip
     unzip ZendFramework-1.11.11.zip > /dev/null
     mv ZendFramework-1.11.11 zend
     ln -s /usr/local/zend/library/Zend  /var/www/html/pincommerce/quickstart/library/Zend 
@@ -227,7 +228,7 @@ check_project(){
 install_daemon_server(){
     
     #check package installed
-    for x in mysql php php-mysql php-xml git crontabs
+    for x in mysql php56 php56-mysql php56-xml git crontabs
     do
         is_packages_installed "$x"
     done
@@ -294,7 +295,7 @@ install_web_server(){
     check_project
     
     #check package installed
-    for x in httpd mysql php php-mysql php-xml php-gd git
+    for x in httpd24 mysql php56 php56-mysql php56-xml php56-gd git
     do
         is_packages_installed "$x"
     done
@@ -338,7 +339,7 @@ install_all(){
 
     #check_project
 
-    for x in httpd mysql mysql-server php php-mysql php-xml php-gd git crontabs
+    for x in httpd24 mysql mysql-server php56 php56-mysql php56-xml php56-gd git crontabs
     do
         is_packages_installed "$x"
     done
