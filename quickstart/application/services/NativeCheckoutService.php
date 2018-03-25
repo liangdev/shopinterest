@@ -23,11 +23,11 @@ class NativeCheckoutService extends BaseService {
         }
     }
 
-    private function get_coupon($couponcode) {
+    private function get_coupon($coupon_code) {
         $coupon = NULL;
-        if (!empty2($couponcode)) {
+        if (!empty2($coupon_code)) {
             $coupon = BaseModel::findCachedOne(
-                CacheKey::q($dbconfig->account->name . ".mycoupon?code=" . $couponcode));
+                CacheKey::q($dbconfig->account->name . ".mycoupon?code=" . $coupon_code));
         }
         return $coupon;
     }
