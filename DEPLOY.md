@@ -1,15 +1,22 @@
-#部署步骤
+#How to deploy
 
-1.将项目文件放到'/var/www/html/pincommerce'下，执行install.sh。
-2.安装php-devel，'yum install php56-devel'。
-3.从https://github.com/phpredis/phpredis/下载redis扩展源代码并解压。
-4.进入解压后的源码目录，执行如下命令：
+1. Clone this repository to '/var/www/html/pincommerce' using following command:
+~~
+git clone https://github.com/liangdev/shopinterest.git '/var/www/html/pincommerce'
+~~
+2. Change current directory to /var/www/html/pincommerce/quickstart/application/scripts and invoke *install.sh*
+3. Install php-devel with following command:
+~~
+yum install php56-devel
+~~
+4. Clone or download zip file and unzip from https://github.com/phpredis/phpredis/.
+5. Change to phpredis's directory, and run follow command to compile and install.
 ~~
 phpize
 ./configure [--enable-redis-igbinary]
 make && make install
 ~~
-5.在/etc/php-5.6.d/目录下增加文件30-redis.ini，内容如下：
+6. create a new file named 30-redis.ini under directory /etc/php-5.6.d/  with following content:
 ~~
 extension=redis.so
 ~~
