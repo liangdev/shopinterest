@@ -1,31 +1,5 @@
 <?php
 
-$blacklist = array('188.143.232.31', '91.121.170.197', '188.143.232.111', '146.0.74.205', '46.161.41.34');
-
-if(in_array($_SERVER['REMOTE_ADDR'], $blacklist)) {
-    die("We can not process your request at this time, Please try again later.");
-}
-
-$whitelist = array('67.169.172.175');
-
-// put the site in maintenance mode
-if(false) {
-    if(!in_array($_SERVER['REMOTE_ADDR'], $whitelist)) {
-        die('<h1>Shopintoit is undergoing a scheduled maintenance and will be back to service soon.</h1>
-            <p><a href="http://blog.shopintoit.com/" target="_blank">Blog</a></p>
-            <p><a href="https://twitter.com/shopintoit" target="_blank">Follow Shopintoit on Twitter</a></p>
-            <p><a href="http://www.facebook.com/shopintoit" target="_blank">Like Shopintoit on Facebook</a></p>');
-    }
-}
-
-// shutdown page
-if((true || isset($_REQUEST['shutdown'])) && !in_array($_SERVER['REMOTE_ADDR'], $whitelist)) {
-    if(substr($_SERVER['REQUEST_URI'], 0, 9) != "/shutdown"){
-        header("Location: /shutdown/");
-        exit;
-    }
-}
-
 // Define path to application directory
 defined('APPLICATION_PATH')
     || define('APPLICATION_PATH', realpath(dirname(__FILE__) . '/../application'));
