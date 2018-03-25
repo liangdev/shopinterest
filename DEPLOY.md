@@ -16,8 +16,9 @@ phpize
 ./configure [--enable-redis-igbinary]
 make && make install
 ~~
-6. create a new file named 30-redis.ini under directory /etc/php-5.6.d/  with following content:
+6. Create a new file named 30-redis.ini under directory /etc/php-5.6.d/  with following content:
 ~~
 extension=redis.so
 ~~
-
+7. Add your IP address into $whitelist in quickstart/public/index.php line 10.
+8. As redis connection is not using in quickstart/public/index.php, comment out line 122.
